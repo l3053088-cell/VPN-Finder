@@ -1,6 +1,5 @@
-package com.example.vpnfinder;
+﻿package com.example.vpnfinder;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -8,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -22,16 +20,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showScreen();
-
-        if (checkSelfPermission("com.termux.permission.RUN_COMMAND")
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(
-                    new String[]{"com.termux.permission.RUN_COMMAND"},
-                    REQUEST_TERMUX
-            );
-        } else {
-            launchFinder();
-        }
+        checkAndLaunch();
     }
 
     private void showScreen() {
@@ -78,7 +67,7 @@ public class MainActivity extends Activity {
 
     private void launchFinder() {
         if (getPackageManager().getLaunchIntentForPackage("com.termux") == null) {
-            status.setText("Termux не найден. Установи и открой Termux хотя бы один раз.");
+            status.setText("Termux не найден. Установи и открой Termux.");
             return;
         }
 
@@ -91,11 +80,11 @@ public class MainActivity extends Activity {
         intent.putExtra("com.termux.RUN_COMMAND_PATH",
                 "/data/data/com.termux/files/usr/bin/bash");
         intent.putExtra("com.termux.RUN_COMMAND_ARGUMENTS",
-                new String[]{"-lc", "python "$HOME/vpn-finder/vpn_finder.py""});
+                new String[]{"-lc", "python \"$HOME/vpn-finder/vpn_finder.py\""});
         intent.putExtra("com.termux.RUN_COMMAND_WORKDIR",
                 "/data/data/com.termux/files/home");
         intent.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
-        intent.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
+        intent.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", 0);
         intent.putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "VPN-Finder");
         intent.putExtra("com.termux.RUN_COMMAND_COMMAND_DESCRIPTION",
                 "Запуск поиска VPN-конфигураций");
@@ -105,18 +94,20 @@ public class MainActivity extends Activity {
             status.setText("Команда отправлена в Termux. Результаты будут в VPN-Results.");
             Toast.makeText(this, "VPN-Finder запущен", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            status.setText("Не удалось запустить Termux: " + e.getMessage());
+            status.setText("Ошибка запуска Termux: " + e.getMessage());
         }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(
+            int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_TERMUX) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 launchFinder();
             } else {
-                status.setText("Нужно разрешить «Запуск команд в Termux» в разрешениях приложения.");
+                status.setText("Необходимо разрешить запуск команд в Termux.");
             }
         }
     }
