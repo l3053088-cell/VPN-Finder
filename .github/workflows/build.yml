@@ -1,4 +1,4 @@
-name: Build VPN-Finder APK
+﻿name: Build VPN-Finder APK
 
 on:
   push:
@@ -22,6 +22,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Install Android platform
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
