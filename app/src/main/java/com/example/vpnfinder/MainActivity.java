@@ -229,7 +229,7 @@ public class MainActivity extends Activity {
                 host = u.getHost(); port = u.getPort();
                 if (host == null && scheme.equals("ss")) {
                     String auth = u.getRawSchemeSpecificPart().split("@", 2)[0];
-                    String dec = new String(Base64.getDecoder().decode(pad(auth)), StandardCharsets.UTF_8);
+                    String dec = new String(android.util.Base64.decode(pad(auth), android.util.Base64.DEFAULT), StandardCharsets.UTF_8);
                     String[] hp = dec.substring(dec.lastIndexOf(':') + 1).split(":", 2);
                     if (hp.length == 2) port = Integer.parseInt(hp[1]);
                     host = dec.substring(dec.lastIndexOf(':') + 1, dec.lastIndexOf(':') + 1 + (hp.length == 2 ? hp[0].length() : 0));
@@ -239,7 +239,7 @@ public class MainActivity extends Activity {
             long start = System.nanoTime();
             try (Socket socket = new Socket()) { socket.connect(new InetSocketAddress(host, port), 1800); }
             long ms = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-            return ms + " ms\t" + link;
+            return link;
         } catch (Exception e) { return null; }
     }
 
