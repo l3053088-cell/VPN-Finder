@@ -1,26 +1,36 @@
-# VPN-Finder Android launcher app
+# VPN-Finder — Android / Android TV
 
-This project builds a small Android launcher app for the user's Termux installation.
+Native Android application for collecting public VPN configuration URIs and checking TCP endpoint reachability. It does not require Termux or Python.
 
-## What it does
-- App label: VPN-Finder
-- Includes regular Android launcher and Android TV / Leanback launcher entry points.
-- Requests `com.termux.permission.RUN_COMMAND`.
-- Calls Termux `RunCommandService` to execute:
-  `python "$HOME/vpn-finder/vpn_finder.py"`
-- Does not bundle or modify the Python script.
+## Device compatibility
+
+- Android 6.0+ (minSdk 23); intended for Android 13.
+- ARM64 and other Android ABIs use the same Java APK; no native CPU-specific binary is bundled.
+- Android TV / Leanback launcher entry is included.
+- Requires Internet access.
+
+## Features
+
+1. Fetches public configuration feeds hosted on GitHub.
+2. Extracts VLESS, VMess, Trojan, Shadowsocks, SSR, Hysteria, Hysteria2, TUIC and related URI schemes.
+3. Decodes Base64 subscription responses where possible and removes duplicate URIs.
+4. TCP-checks endpoints for supported URI formats and reports connection latency.
+5. Exports found links to `Download/VPN-Finder/vpn_links_found.txt`; if TCP checks have results, exports those to `vpn_links_tcp_checked.txt`.
+
+**Important:** TCP reachability is not a protocol handshake and does not prove that a VPN tunnel works. This Android-native first release implements collection and TCP screening. Xray-based deep protocol verification from the separate Linux script is not included in this build.
 
 ## Build
-Push this folder to a GitHub repository. GitHub Actions builds a debug APK on every push or when manually started.
 
-In GitHub: Actions -> Build VPN-Finder APK -> latest run -> Artifacts -> VPN-Finder-debug-apk.
+GitHub Actions builds a debug APK on pushes and manual dispatches:
 
-Install `app-debug.apk` on the Android device. The debug APK is intended for personal installation/testing.
+1. Open **Actions**.
+2. Select **Build VPN-Finder APK**.
+3. Open the latest run on branch `android-native-app`.
+4. Download artifact **VPN-Finder-debug-apk** and extract `app-debug.apk`.
+5. Install the APK on the Android device.
 
-## First launch
-1. Open VPN-Finder.
-2. Grant the permission to run commands in Termux when Android asks.
-3. If the permission prompt does not appear, open Settings -> Apps -> VPN-Finder -> Permissions / Additional permissions and grant "Run commands in Termux environment".
-4. Tap "ЗАПУСТИТЬ ПОИСК".
+The APK is a standard Android application and does not need Termux, Python, root, or changes to the system image.
 
-Termux must already be installed, initialized, and have `allow-external-apps = true`.
+## Privacy and safety
+
+The app fetches public text feeds over HTTPS. Public VPN configurations are supplied by third parties and may be untrusted, unstable, or malicious. Do not use them for banking, private accounts, or sensitive traffic. The app only collects and TCP-checks links; it does not connect the device to a VPN.
