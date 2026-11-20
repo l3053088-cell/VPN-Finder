@@ -253,25 +253,103 @@ public class MainActivity extends Activity {
         return b.toString();
     }
 
+    private String protocolFileName(String link) {
+        int separator = link.indexOf("://");
+        if (separator <= 0) return null;
+        String scheme = link.substring(0, separator).toLowerCase(Locale.ROOT);
+        switch (scheme) {
+            case "vless": return "vless_links.txt";
+            case "vmess": return "vmess_links.txt";
+            case "trojan": return "trojan_links.txt";
+            case "ss": return "ss_links.txt";
+            case "ssr": return "ssr_links.txt";
+            case "hysteria": return "hysteria_links.txt";
+            case "hysteria2": return "hysteria2_links.txt";
+            case "hy2": return "hy2_links.txt";
+            case "tuic": return "tuic_links.txt";
+            default: return null;
+        }
+    }
+
+    private Uri findExistingDownload(String displayName) {
+        if (Build.VERSION.SDK_INT < 29) return null;
+        String[] projection = { MediaStore.Downloads._ID };
+        String selection = MediaStore.Downloads.DISPLAY_NAME + "=? AND " +
+                MediaStore.Downloads.RELATIVE_PATH + "=?";
+        String[] args = { displayName, "Download/VPN-Finder/" };
+        try (android.database.Cursor cursor = getContentResolver().query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, args, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID));
+                return android.content.ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI, id);
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    private void saveProtocolFile(String displayName, List<String> entries) throws IOException {
+        if (Build.VERSION.SDK_INT < 29)
+            throw new IOException("Для сохранения в общую папку Downloads требуется Android 10 или новее.");
+        Uri uri = findExistingDownload(displayName);
+        if (uri == null) {
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Downloads.DISPLAY_NAME, displayName);
+            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
+            values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/VPN-Finder");
+            uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        }
+        if (uri == null) throw new IOException("Не удалось создать файл " + displayName);
+        try (OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+            if (out == null) throw new IOException("Не удалось открыть файл " + displayName);
+            for (String entry : entries) {
+                out.write(entry.getBytes(StandardCharsets.UTF_8));
+                out.write('\n');
+            }
+        }
+    }
+
     private void exportResults() {
         final List<String> rows;
         synchronized (working) {
             rows = new ArrayList<>(working.isEmpty() ? links : working);
         }
-        StringBuilder data = new StringBuilder();
-        for (String s : rows) data.append(s).append("\n");
+        if (rows.isEmpty()) {
+            status.setText("Нет ссылок для сохранения.");
+            return;
+        }
+
+        Map<String, List<String>> grouped = new LinkedHashMap<>();
+        for (String link : rows) {
+            String fileName = protocolFileName(link);
+            if (fileName == null) continue;
+            if (!grouped.containsKey(fileName)) grouped.put(fileName, new ArrayList<>());
+            grouped.get(fileName).add(link);
+        }
+
+        int savedFiles = 0;
+        int savedLinks = 0;
+        StringBuilder report = new StringBuilder("Сохранение по протоколам:\n");
         try {
-            ContentValues values = new ContentValues();
-            values.put(MediaStore.Downloads.DISPLAY_NAME, working.isEmpty() ? "vpn_links_found.txt" : "vpn_links_tcp_checked.txt");
-            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
-            if (Build.VERSION.SDK_INT >= 29) values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/VPN-Finder");
-            Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-            if (uri == null) throw new IOException("Не удалось создать файл");
-            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                out.write(data.toString().getBytes(StandardCharsets.UTF_8));
+            for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
+                saveProtocolFile(entry.getKey(), entry.getValue());
+                savedFiles++;
+                savedLinks += entry.getValue().size();
+                report.append(entry.getKey()).append(" — ")
+                        .append(entry.getValue().size()).append(" ссылок\n");
             }
-            status.setText("Сохранено в Download/VPN-Finder (" + rows.size() + " ссылок).");
-        } catch (Exception e) { status.setText("Ошибка сохранения: " + e.getMessage()); }
+            if (savedFiles == 0) {
+                status.setText("Не удалось определить типы ссылок для экспорта.");
+                return;
+            }
+            report.append("\nПапка: Download/VPN-Finder");
+            report.append("\nВсего: ").append(savedLinks).append(" ссылок в ")
+                    .append(savedFiles).append(" файлах.");
+            status.setText("Сохранено: " + savedLinks + " ссылок в " + savedFiles + " отдельных файлах.");
+            output.setText(report.toString());
+        } catch (Exception e) {
+            status.setText("Ошибка сохранения: " + e.getMessage());
+        }
     }
 
     @Override protected void onDestroy() {
