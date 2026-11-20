@@ -171,7 +171,7 @@ public class MainActivity extends Activity {
         if (t.length() < 40 || !t.matches("[A-Za-z0-9_+/=-]+")) return text;
         try {
             String padded = t + "====".substring(0, (4 - t.length() % 4) % 4);
-            return new String(Base64.getDecoder().decode(padded), StandardCharsets.UTF_8);
+            return new String(android.util.Base64.decode(padded, android.util.Base64.DEFAULT), StandardCharsets.UTF_8);
         } catch (Exception e) { return text; }
     }
 
@@ -221,7 +221,7 @@ public class MainActivity extends Activity {
             String host = null; int port = -1;
             if (scheme.equals("vmess")) {
                 String raw = link.substring(8).split("[?#]", 2)[0];
-                String json = new String(Base64.getDecoder().decode(pad(raw)), StandardCharsets.UTF_8);
+                String json = new String(android.util.Base64.decode(pad(raw), android.util.Base64.DEFAULT), StandardCharsets.UTF_8);
                 JSONObject o = new JSONObject(json);
                 host = o.optString("add", null); port = Integer.parseInt(o.optString("port", "-1"));
             } else {
